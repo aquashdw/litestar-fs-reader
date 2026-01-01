@@ -1,0 +1,9 @@
+[project]
+name = "litestar-fs-reader"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "litestar[standard]>=2.19.0",
+    "python-dotenv>=1.2.1",
+]
