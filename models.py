@@ -1,6 +1,7 @@
 import enum
 import uuid
-from typing import List, Type
+from dataclasses import dataclass
+from typing import List, Type, Literal
 
 from sqlalchemy import Integer, Text, Enum, ForeignKey, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
@@ -34,6 +35,46 @@ class FSObject(Base):
     )
 
 
+@dataclass
+class FSObjectDto:
+    id: int | None
+    name: str
+    full_path: str
+    ref_id: str | None
+    parent_id: int | None
+    type: str | None
+
+    @classmethod
+    def from_entity(cls, entity: FSObject):
+        match entity.type:
+            case FSObjectType.DIR:
+                return DirDto(
+                    id=entity.id,
+                    name=entity.name,
+                    full_path=entity.full_path,
+                    ref_id=entity.ref_id,
+                    parent_id=entity.parent_id,
+                )
+            case FSObjectType.FILE:
+                return FileDto(
+                    id=entity.id,
+                    name=entity.name,
+                    full_path=entity.full_path,
+                    ref_id=entity.ref_id,
+                    parent_id=entity.parent_id,
+                )
+
+
+@dataclass
+class FileDto(FSObjectDto):
+    type: Literal['file'] = 'file'
+
+
+@dataclass
+class DirDto(FSObjectDto):
+    type: Literal['dir'] = 'dir'
+
+
 if __name__ == '__main__':
     engine = create_engine('sqlite:///test.sqlite')
 
@@ -65,7 +106,30 @@ if __name__ == '__main__':
             full_path='/foo/bar/baz',
             ref_id=str(uuid.uuid4()).replace('-', ''),
             type=FSObjectType.FILE,
-            parent=bar,
+            parent=foo,
         )
-        session.add_all([root, foo, bar, baz])
+
+        test_audio = FSObject(
+            name='test_audio.mp3',
+            full_path='/test_audio.mp3',
+            ref_id=str(uuid.uuid4()).replace('-', ''),
+            type=FSObjectType.FILE,
+            parent=root,
+        )
+        test_video = FSObject(
+            name='test_video.mp4',
+            full_path='/test_video.mp4',
+            ref_id=str(uuid.uuid4()).replace('-', ''),
+            type=FSObjectType.FILE,
+            parent=root,
+        )
+
+        session.add_all([
+            root,
+            foo,
+            bar,
+            baz,
+            test_audio,
+            test_video,
+        ])
         session.commit()
