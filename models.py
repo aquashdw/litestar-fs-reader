@@ -106,7 +106,7 @@ if __name__ == '__main__':
             full_path='/foo/bar/baz',
             ref_id=str(uuid.uuid4()).replace('-', ''),
             type=FSObjectType.FILE,
-            parent=foo,
+            parent=bar,
         )
 
         test_audio = FSObject(

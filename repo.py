@@ -44,10 +44,16 @@ class FSRepository:
         self.session.add(new_file)
 
     def get_by_path(self, full_path: str) -> FSObjectDto:
-        result = FSObjectDto.from_entity(self.session.scalar(select(FSObject).where(FSObject.full_path == full_path)))
-        if not result:
+        entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
+        if not entity:
             raise ValueError('not found')
-        return result
+        return FSObjectDto.from_entity(entity)
+
+    def get_by_id(self, pk: int) -> FSObjectDto:
+        entity = self.session.get(FSObject, pk)
+        if not entity:
+            raise ValueError('not found')
+        return FSObjectDto.from_entity(entity)
 
     def listdir(self, dir_id: int) -> Iterable[FSObjectDto]:
         return map(FSObjectDto.from_entity, self.session.scalars(select(FSObject).where(FSObject.parent_id == dir_id)))

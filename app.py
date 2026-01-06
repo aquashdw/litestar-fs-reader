@@ -1,15 +1,13 @@
 import os
-from csv import excel
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Literal
 
-from typing import List, Union, Literal
-from litestar import Litestar, get, Request
 from dotenv import load_dotenv
+from litestar import Litestar, get, Request
 from litestar.exceptions import HTTPException
-from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 
-from models import FileDto, DirDto, FSObjectDto
+from models import FSObjectDto
 from repo import FSRepository
 
 load_dotenv()
@@ -42,13 +40,14 @@ class Item:
 
 @get('/')
 async def index() -> List[Item]:
-    return [
-        Item(
-            item.name,
-            '/' + item.name,
-            'file' if item.is_file() else 'dir'
-        ) for item in Path(ROOT_DIR).iterdir()
-    ]
+    with repository() as session:
+        try:
+            root = session.get_by_path('/')
+            return list(session.listdir(root.id))
+        except ValueError:
+            # TODO log: root doesn't exist in db?
+            print('root obj not in db')
+            raise HTTPException(status_code=500)
 
 
 @get('/{full_path:path}')
@@ -64,43 +63,18 @@ async def get_path(
         # no file nor dir
         if not path.exists():
             # TODO log: file is removed without user notice?
+            print('file removed without db update')
             raise HTTPException(status_code=500)
-
         match target.type:
             case 'dir':
-                # TODO add parent
-                return list(session.listdir(target.id))
+                iter_dir = list(session.listdir(target.id))
+                parent = session.get_by_id(target.parent_id)
+                iter_dir.append(Item('..', parent.full_path, 'dir',))
+                return iter_dir
             case 'file':
-                # TODO
-                raise HTTPException(status_code=501)
+                return path.read_bytes()
 
     raise HTTPException(status_code=500)
-    # if dir, list dir + parent dir
-    if path.is_dir():
-        iter_dir = [
-            Item(
-                item.name,
-                str(item).replace(ROOT_DIR, ''),
-                'file' if item.is_file() else 'dir'
-            ) for item in path.iterdir()
-        ]
-        last_slash = full_path.rfind('/')
-        if last_slash == 0:
-            iter_dir.append(Item(
-                '..',
-                '/',
-                'dir'
-            ))
-        else:
-            iter_dir.append(Item(
-                '..',
-                full_path[:last_slash],
-                'dir',
-            ))
-        return iter_dir
-    # else return as bytes
-    else:
-        return path.read_bytes()
 
 
 app = Litestar([index, get_path])
