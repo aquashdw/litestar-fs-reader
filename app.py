@@ -51,9 +51,7 @@ async def index() -> List[Item]:
 
 
 @get('/{full_path:path}')
-async def get_path(
-        request: Request,
-        full_path: str) -> List[Item] | bytes:
+async def get_path(full_path: str) -> List[Item] | bytes:
     with repository() as session:
         try:
             target = session.get_by_path(full_path)

@@ -8,12 +8,12 @@ from sqlalchemy.orm import sessionmaker
 from models import FSObject, FSObjectType, FileDto, FSObjectDto
 
 
-class FSRepository:
-    def __init__(self, connection_str: str = 'sqlite:///test.sqlite'):
-        engine = create_engine(connection_str)
+class Repository:
+    def __init__(self, connection_string: str = 'sqlite:///test.sqlite'):
+        self.engine = create_engine(connection_string)
         self.session_maker = sessionmaker(
             autoflush=True,
-            bind=engine
+            bind=self.engine,
         )
         self.session = None
 
@@ -28,6 +28,8 @@ class FSRepository:
         self.session.close()
         self.session = None
 
+
+class FSRepository(Repository):
     def create(self, dto: FSObjectDto):
         parent_id = dto.parent_id
         name = dto.name
