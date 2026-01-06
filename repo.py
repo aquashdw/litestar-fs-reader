@@ -5,7 +5,7 @@ from typing import Iterable
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from models import FSObject, FSObjectType, FileDto, FSObjectDto
+from models import FSObject, FSObjectType, FSObjectDto
 
 
 class Repository:
@@ -25,25 +25,25 @@ class Repository:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.session.commit()
         self.session.close()
         self.session = None
 
 
 class FSRepository(Repository):
-    def create(self, dto: FSObjectDto):
-        parent_id = dto.parent_id
+    def create(self, dto: FSObjectDto, parent_path: str) -> FSObjectDto:
         name = dto.name
-        parent = self.session.scalar(select(FSObject).where(FSObject.id == parent_id))
-        if not parent:
-            raise ValueError('parent')
+        parent = self.get_by_path(parent_path)
+        file_type = dto.type
         new_file = FSObject(
             name=name,
             full_path=os.path.join(parent.full_path, name),
             ref_id=str(uuid.uuid4()).replace('-', ''),
-            type=FSObjectType.FILE if type(dto) == FileDto else FSObjectType.DIR,
-            parent=parent,
+            type=FSObjectType.FILE if file_type == 'file' else FSObjectType.DIR,
+            parent_id=parent.id,
         )
         self.session.add(new_file)
+        return FSObjectDto.from_entity(new_file)
 
     def get_by_path(self, full_path: str) -> FSObjectDto:
         entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))

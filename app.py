@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import List, Literal
 
 from dotenv import load_dotenv
-from litestar import Litestar, get, Request
+from litestar import Litestar, get, post
 from litestar.exceptions import HTTPException
 
-from models import FSObjectDto
+from models import FSObjectDto, DirDto
 from repo import FSRepository
 
 load_dotenv()
@@ -51,7 +51,7 @@ async def index() -> List[Item]:
 
 
 @get('/{full_path:path}')
-async def get_path(full_path: str) -> List[Item] | bytes:
+async def get_obj(full_path: str) -> List[Item] | bytes:
     with repository() as session:
         try:
             target = session.get_by_path(full_path)
@@ -75,4 +75,33 @@ async def get_path(full_path: str) -> List[Item] | bytes:
     raise HTTPException(status_code=500)
 
 
-app = Litestar([index, get_path])
+@post('/{full_path:path}')
+async def create_obj(full_path: str, mkdir: str | None) -> Item:
+    path = Path(ROOT_DIR + full_path)
+    if full_path.endswith('/'):
+        full_path = full_path[:-1]
+    if path.exists():
+        print('file or dir exists')
+        raise HTTPException(status_code=400)
+    with repository() as session:
+        if mkdir is not None:
+            last_slash = full_path.rfind('/')
+            path.mkdir()
+            parent_path = full_path[:last_slash]
+            if not parent_path:
+                parent_path = '/'
+            dto = DirDto(
+                id=None,
+                name=path.name,
+                full_path=full_path,
+                ref_id=None,
+                parent_id=None,
+            )
+            dto = session.create(dto, parent_path)
+            return Item.from_dto(dto)
+        else:
+            # TODO add file
+            raise HTTPException(status_code=501)
+
+
+app = Litestar([index, get_obj, create_obj])

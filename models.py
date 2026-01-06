@@ -1,7 +1,7 @@
 import enum
 import uuid
 from dataclasses import dataclass
-from typing import List, Type, Literal
+from typing import List, Type, Literal, Optional
 
 from sqlalchemy import Integer, Text, Enum, ForeignKey, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
@@ -37,12 +37,12 @@ class FSObject(Base):
 
 @dataclass
 class FSObjectDto:
-    id: int | None
+    id: Optional[int]
     name: str
     full_path: str
-    ref_id: str | None
-    parent_id: int | None
-    type: str | None
+    ref_id: Optional[str]
+    parent_id: Optional[int]
+    type: Optional[str]
 
     @classmethod
     def from_entity(cls, entity: FSObject):
