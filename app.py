@@ -17,6 +17,10 @@ ROOT_DIR = os.environ.get('ROOT_DIR', '.')
 ROOT_DIR = os.path.abspath(ROOT_DIR)
 if ROOT_DIR.endswith('/'):
     ROOT_DIR = ROOT_DIR[:-1]
+if not os.path.exists(ROOT_DIR):
+    os.mkdir(ROOT_DIR)
+elif os.path.isfile(ROOT_DIR):
+    raise FileExistsError(f'{ROOT_DIR} exists and is not a directory')
 
 repository = FSRepository()
 
