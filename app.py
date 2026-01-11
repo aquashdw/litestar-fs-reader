@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,8 +54,13 @@ async def index() -> List[Item]:
             raise HTTPException(status_code=500)
 
 
+def get_mime_type(filename: str) -> str:
+    mime_type, _ = mimetypes.guess_type(filename)
+    return mime_type or 'application/octet-stream'
+
+
 @get('/{full_path:path}')
-async def get_obj(full_path: str) -> List[Item] | bytes:
+async def get_obj(full_path: str) -> List[Item] | Response:
     with repository() as session:
         try:
             target = session.get_by_path(full_path)
@@ -73,7 +79,10 @@ async def get_obj(full_path: str) -> List[Item] | bytes:
                 iter_dir.append(Item('..', parent.full_path, 'dir',))
                 return iter_dir
             case 'file':
-                return path.read_bytes()
+                return Response(
+                    content=path.read_bytes(),
+                    media_type=get_mime_type(path.name),
+                )
 
     raise HTTPException(status_code=500)
 
