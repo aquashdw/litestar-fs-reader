@@ -39,7 +39,7 @@ class FSObject(Base):
 class FSObjectDto:
     id: Optional[int]
     name: str
-    full_path: str
+    full_path: Optional[str]
     ref_id: Optional[str]
     parent_id: Optional[int]
     type: Optional[str]
