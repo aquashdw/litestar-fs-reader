@@ -1,4 +1,3 @@
-import mimetypes
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,15 +5,15 @@ from typing import List, Literal, Annotated
 
 from dotenv import load_dotenv
 from litestar import Litestar, get, post
-from litestar.response import Stream
 from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
 from litestar.exceptions import HTTPException
 from litestar.params import Body
+from litestar.response import Stream
 
 from models import FSObjectDto, DirDto, FileDto
-from utils import file_streamer
 from repo import FSRepository
+from utils import file_streamer, get_mime_type
 
 load_dotenv()
 ROOT_DIR = os.environ.get('ROOT_DIR', '.')
@@ -56,11 +55,6 @@ async def index() -> List[Item]:
             raise HTTPException(status_code=500)
 
 
-def get_mime_type(filename: str) -> str:
-    mime_type, _ = mimetypes.guess_type(filename)
-    return mime_type or 'application/octet-stream'
-
-
 @get('/{full_path:path}')
 async def get_obj(full_path: str) -> List[Item] | Stream:
     with repository() as session:
@@ -78,7 +72,7 @@ async def get_obj(full_path: str) -> List[Item] | Stream:
             case 'dir':
                 iter_dir = list(session.listdir(target.id))
                 parent = session.get_by_id(target.parent_id)
-                iter_dir.append(Item('..', parent.full_path, 'dir',))
+                iter_dir.append(Item('..', parent.full_path, 'dir', ))
                 return iter_dir
             case 'file':
                 return Stream(
