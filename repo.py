@@ -2,7 +2,7 @@ import os.path
 import uuid
 from typing import Iterable
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
 
 from models import FSObject, FSObjectType, FSObjectDto
@@ -16,6 +16,9 @@ class Repository:
             bind=self.engine,
         )
         self.session = None
+
+    def create_inspector(self):
+        return inspect(self.engine)
 
     def __call__(self, *args, **kwargs):
         self.session = self.session_maker()
@@ -31,6 +34,16 @@ class Repository:
 
 
 class FSRepository(Repository):
+    def create_root(self) -> FSObjectDto:
+        root = FSObject(
+            name='/',
+            full_path='/',
+            ref_id='root',
+            type=FSObjectType.DIR
+        )
+        self.session.add(root)
+        return FSObjectDto.from_entity(root)
+
     def create(self, dto: FSObjectDto, parent_path: str) -> FSObjectDto:
         name = dto.name
         parent = self.get_by_path(parent_path)
