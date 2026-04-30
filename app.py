@@ -16,13 +16,10 @@ from repo import FSRepository
 from utils import file_streamer, get_mime_type
 
 load_dotenv()
-ROOT_DIR = os.environ.get('ROOT_DIR', '.')
-ROOT_DIR = os.path.abspath(ROOT_DIR)
-if ROOT_DIR.endswith('/'):
-    ROOT_DIR = ROOT_DIR[:-1]
-if not os.path.exists(ROOT_DIR):
-    os.mkdir(ROOT_DIR)
-elif os.path.isfile(ROOT_DIR):
+ROOT_DIR = Path(os.environ.get('ROOT_DIR', '.')).resolve()
+if not ROOT_DIR.exists():
+    ROOT_DIR.mkdir(parents=True)
+elif ROOT_DIR.is_file():
     raise FileExistsError(f'{ROOT_DIR} exists and is not a directory')
 
 repository = FSRepository()
@@ -62,7 +59,7 @@ async def get_obj(full_path: str) -> List[Item] | Stream:
             target = session.get_by_path(full_path)
         except ValueError:
             raise HTTPException(status_code=404)
-        path = Path(ROOT_DIR + target.full_path)
+        path = ROOT_DIR / target.full_path
         # no file nor dir
         if not path.exists():
             # TODO log: file is removed without user notice?
@@ -91,7 +88,7 @@ async def create_obj(
 ) -> Item:
     if full_path.endswith('/'):
         full_path = full_path[:-1]
-    path = Path(ROOT_DIR + full_path)
+    path = ROOT_DIR / full_path
     if isdir is not None:
 
         if path.exists():
