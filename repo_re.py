@@ -46,7 +46,7 @@ class RepositoryFactory:
     def inspector(self):
         return self._inspector
 
-    def __call__(self, target: type[RepositorySession], *args, **kwargs):
+    def __call__(self, target: type[RepositorySession], *args, **kwargs) -> RepositorySession:
         return target(self.session_maker(), *args, **kwargs)
 
 
