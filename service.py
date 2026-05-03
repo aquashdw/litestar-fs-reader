@@ -1,7 +1,7 @@
 import os
 import uuid
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Iterable
 
 from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
@@ -19,6 +19,11 @@ class FSService:
 
     def get_session(self):
         return self.repo_factory(FSRepository)
+
+    def list_root(self) -> Iterable[FSObjectDto]:
+        with self.get_session() as session:
+            root_entity = session.get_by_path(FSObject.name)
+            return list(map(FSObjectDto.from_entity, root_entity.children))
 
     async def create(
             self,

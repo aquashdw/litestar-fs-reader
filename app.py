@@ -45,14 +45,7 @@ class Item:
 
 @get('/')
 async def index() -> List[Item]:
-    with repository() as session:
-        try:
-            root = session.get_by_path('/')
-            return list(session.listdir(root.id))
-        except ValueError:
-            # TODO log: root doesn't exist in db?
-            print('root obj not in db')
-            raise HTTPException(status_code=500)
+    return list(map(Item.from_dto, service.list_root()))
 
 
 @get('/{full_path:path}')
