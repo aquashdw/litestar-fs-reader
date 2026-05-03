@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Literal, Annotated, Optional
+from typing import List, Literal, Annotated, Optional, Iterable
 
 from dotenv import load_dotenv
 from litestar import Litestar, get, post
@@ -44,18 +44,18 @@ class Item:
 
 
 @get('/')
-async def index() -> List[Item]:
-    return list(map(Item.from_dto, service.list_root()))
+async def index() -> Iterable[FSObjectDto]:
+    return service.list_root()
 
 
 @get('/{full_path:path}')
-async def get_obj(full_path: str) -> List[Item] | Stream:
+async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
     with repository() as session:
         try:
             target = session.get_by_path(full_path)
         except ValueError:
             raise HTTPException(status_code=404)
-        path = ROOT_DIR / target.full_path
+        path = ROOT_DIR / target.full_path[1:]
         # no file nor dir
         if not path.exists():
             # TODO log: file is removed without user notice?
@@ -81,10 +81,10 @@ async def create_obj(
         full_path: str,
         isdir: str | None = None,
         data: Optional[Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)]] = None,
-) -> Item:
+) -> FSObjectDto:
     if full_path.startswith('/'):
         full_path = full_path[1:]
-    return Item.from_dto(await service.create(full_path, isdir, data))
+    return await service.create(full_path, isdir, data)
 
 
 app = Litestar([index, get_obj, create_obj])
