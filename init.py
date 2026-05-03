@@ -1,7 +1,10 @@
 from pathlib import Path
 
 from models import FSObject, Base, FSObjectType
-from repo_bak import FSRepository
+from repo import RepositoryFactory, FSRepository
+from repo_bak import FSRepository as repo_before
+
+repo_factory = RepositoryFactory()
 
 
 def check_schema(connection_string: str = 'sqlite:///test.sqlite'):
@@ -9,14 +12,14 @@ def check_schema(connection_string: str = 'sqlite:///test.sqlite'):
     Check the database of connection string to see if required tables exists
     Create if it doesn't exist
     """
+
     # connected with Repository
-    repo = FSRepository(connection_string)
-    inspector = repo.create_inspector()
+    inspector = repo_factory.inspector
     if not inspector.has_table(FSObject.__tablename__):
         print('table does not exist, creating')
-        Base.metadata.create_all(repo.engine)
+        Base.metadata.create_all(repo_factory.engine)
 
-    with repo() as session:
+    with repo_factory(FSRepository) as session:
         try:
             session.get_by_path('/')
         except ValueError:
@@ -29,7 +32,7 @@ def compare_fs_db(root_dir: str = '.', connection_string: str = 'sqlite:///test.
     starting with root_dir, compare database records with the actual filesystem.
     """
     root_path = Path(root_dir).absolute()
-    repo = FSRepository(connection_string)
+    repo = repo_before(connection_string)
     with repo() as session:
         root_entity = session.get_by_path('/')
 
