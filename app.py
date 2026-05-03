@@ -1,7 +1,6 @@
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Literal, Annotated, Optional, Iterable
+from typing import List, Annotated, Optional, Iterable
 
 from dotenv import load_dotenv
 from litestar import Litestar, get, post
@@ -24,21 +23,6 @@ elif ROOT_DIR.is_file():
 
 repository = FSRepository()
 service = FSService(RepositoryFactory(), ROOT_DIR)
-
-
-@dataclass
-class Item:
-    name: str
-    path: str
-    type: Literal['file'] | Literal['dir'] | str
-
-    @classmethod
-    def from_dto(cls, dto: FSObjectDto):
-        return cls(
-            name=dto.name,
-            path=dto.full_path,
-            type=dto.type
-        )
 
 
 @get('/')
