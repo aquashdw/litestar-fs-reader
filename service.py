@@ -39,13 +39,15 @@ class FSService:
             if not ph_path.exists():
                 raise HTTPException(status_code=500)
 
-            if target.type == FSObjectType.DIR:
+            if target.type == FSObjectType.DIR and ph_path.is_dir():
                 return list(map(FSObjectDto.from_entity, target.children))
-
-            return Stream(
-                file_streamer(ph_path),
-                media_type=get_mime_type(target.name),
-            )
+            elif target.type == FSObjectType.FILE and ph_path.is_file():
+                return Stream(
+                    file_streamer(ph_path),
+                    media_type=get_mime_type(target.name),
+                )
+            # file dir missmatch
+            raise HTTPException(status_code=500)
 
     async def create(
             self,
