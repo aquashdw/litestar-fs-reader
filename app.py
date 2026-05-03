@@ -10,8 +10,7 @@ from litestar.params import Body
 from litestar.response import Stream
 
 from models import FSObjectDto
-from repo import FSRepository
-from repo_re import RepositoryFactory
+from repo import RepositoryFactory
 from service import FSService
 
 load_dotenv()
@@ -21,7 +20,6 @@ if not ROOT_DIR.exists():
 elif ROOT_DIR.is_file():
     raise FileExistsError(f'{ROOT_DIR} exists and is not a directory')
 
-repository = FSRepository()
 service = FSService(RepositoryFactory(), ROOT_DIR)
 
 

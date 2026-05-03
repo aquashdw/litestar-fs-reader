@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from models import FSObject, Base, FSObjectType
-from repo import FSRepository
+from repo_bak import FSRepository
 
 
 def check_schema(connection_string: str = 'sqlite:///test.sqlite'):

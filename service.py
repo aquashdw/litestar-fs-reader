@@ -10,7 +10,7 @@ from litestar.params import Body
 from litestar.response import Stream
 
 from models import FSObjectDto, FSObject, FSObjectType, DirDto, FileDto
-from repo_re import FSRepository, RepositoryFactory
+from repo import FSRepository, RepositoryFactory
 from utils import file_streamer, get_mime_type
 
 

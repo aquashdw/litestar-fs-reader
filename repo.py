@@ -1,28 +1,20 @@
-import os.path
-import uuid
-from typing import Iterable
+from abc import ABC
+from typing import List, Optional
 
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
 
-from models import FSObject, FSObjectType, FSObjectDto
+from models import FSObject, FSObjectType
 
 
-class Repository:
-    def __init__(self, connection_string: str = 'sqlite:///test.sqlite'):
-        self.engine = create_engine(connection_string)
-        self.session_maker = sessionmaker(
-            autoflush=True,
-            bind=self.engine,
-        )
-        self.session = None
+class RepositorySession(ABC):
+    """
+    Abstract Repository Session to be implemented by children
+    who actually decides how to interact with database.
+    """
 
-    def create_inspector(self):
-        return inspect(self.engine)
-
-    def __call__(self, *args, **kwargs):
-        self.session = self.session_maker()
-        return self
+    def __init__(self, session, *args, **kwargs):
+        self.session = session
 
     def __enter__(self):
         return self
@@ -30,13 +22,36 @@ class Repository:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             self.session.rollback()
-        self.session.commit()
+        else:
+            self.session.commit()
         self.session.close()
         self.session = None
 
 
-class FSRepository(Repository):
-    def create_root(self) -> FSObjectDto:
+class RepositoryFactory:
+    """
+    Factory class to create repository sessions.
+    """
+
+    def __init__(self, connection_string: str = 'sqlite:///test.sqlite'):
+        self.engine = create_engine(connection_string)
+        self.session_maker = sessionmaker(
+            autoflush=True,
+            bind=self.engine,
+        )
+
+        self._inspector = inspect(self.engine)
+
+    @property
+    def inspector(self):
+        return self._inspector
+
+    def __call__(self, target: type[RepositorySession], *args, **kwargs) -> RepositorySession:
+        return target(self.session_maker(), *args, **kwargs)
+
+
+class FSRepository(RepositorySession):
+    def create_root(self) -> FSObject:
         root = FSObject(
             name='/',
             full_path='/',
@@ -44,33 +59,20 @@ class FSRepository(Repository):
             type=FSObjectType.DIR
         )
         self.session.add(root)
-        return FSObjectDto.from_entity(root)
+        return root
 
-    def create(self, dto: FSObjectDto, parent_path: str) -> FSObjectDto:
-        name = dto.name
-        parent = self.get_by_path(parent_path)
-        file_type = dto.type
-        new_file = FSObject(
-            name=name,
-            full_path=os.path.join(parent.full_path, name),
-            ref_id=str(uuid.uuid4()).replace('-', ''),
-            type=FSObjectType.FILE if file_type == 'file' else FSObjectType.DIR,
-            parent_id=parent.id,
-        )
-        self.session.add(new_file)
-        return FSObjectDto.from_entity(new_file)
+    def create(self, fs_object: FSObject) -> FSObject:
+        self.session.add(fs_object)
+        self.session.flush()
+        return fs_object
 
-    def get_by_path(self, full_path: str) -> FSObjectDto:
-        entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
-        if not entity:
-            raise ValueError('not found')
-        return FSObjectDto.from_entity(entity)
-
-    def get_by_id(self, pk: int) -> FSObjectDto:
+    def get_by_id(self, pk: int) -> Optional[FSObject]:
         entity = self.session.get(FSObject, pk)
-        if not entity:
-            raise ValueError('not found')
-        return FSObjectDto.from_entity(entity)
+        return entity
 
-    def listdir(self, dir_id: int) -> Iterable[FSObjectDto]:
-        return map(FSObjectDto.from_entity, self.session.scalars(select(FSObject).where(FSObject.parent_id == dir_id)))
+    def get_by_path(self, full_path: str) -> Optional[FSObject]:
+        entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
+        return entity
+
+    def listdir(self, dir_obj: FSObject) -> List[FSObject]:
+        return self.session.scalars(select(FSObject).where(FSObject.parent_id == dir_obj.id))
