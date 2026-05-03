@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from litestar import Litestar, get, post
 from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
-from litestar.exceptions import HTTPException
 from litestar.params import Body
 from litestar.response import Stream
 
@@ -15,7 +14,6 @@ from models import FSObjectDto
 from repo import FSRepository
 from repo_re import RepositoryFactory
 from service import FSService
-from utils import file_streamer, get_mime_type
 
 load_dotenv()
 ROOT_DIR = Path(os.environ.get('ROOT_DIR', '.')).absolute()
@@ -50,30 +48,7 @@ async def index() -> Iterable[FSObjectDto]:
 
 @get('/{full_path:path}')
 async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
-    with repository() as session:
-        try:
-            target = session.get_by_path(full_path)
-        except ValueError:
-            raise HTTPException(status_code=404)
-        path = ROOT_DIR / target.full_path[1:]
-        # no file nor dir
-        if not path.exists():
-            # TODO log: file is removed without user notice?
-            print('file removed without db update')
-            raise HTTPException(status_code=500)
-        match target.type:
-            case 'dir':
-                iter_dir = list(session.listdir(target.id))
-                parent = session.get_by_id(target.parent_id)
-                iter_dir.append(Item('..', parent.full_path, 'dir', ))
-                return iter_dir
-            case 'file':
-                return Stream(
-                    file_streamer(path),
-                    media_type=get_mime_type(path.name),
-                )
-
-    raise HTTPException(status_code=500)
+    return await service.get_obj(full_path)
 
 
 @post('/{full_path:path}')

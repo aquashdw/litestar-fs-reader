@@ -7,9 +7,11 @@ from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
 from litestar.exceptions import HTTPException
 from litestar.params import Body
+from litestar.response import Stream
 
 from models import FSObjectDto, FSObject, FSObjectType, DirDto, FileDto
 from repo_re import FSRepository, RepositoryFactory
+from utils import file_streamer, get_mime_type
 
 
 class FSService:
@@ -20,10 +22,30 @@ class FSService:
     def get_session(self):
         return self.repo_factory(FSRepository)
 
-    def list_root(self) -> Iterable[FSObjectDto]:
+    def list_dir(self, full_path: str) -> Iterable[FSObjectDto]:
         with self.get_session() as session:
-            root_entity = session.get_by_path(FSObject.name)
-            return list(map(FSObjectDto.from_entity, root_entity.children))
+            dir_entity = session.get_by_path(full_path)
+            return list(map(FSObjectDto.from_entity, dir_entity.children))
+
+    def list_root(self) -> Iterable[FSObjectDto]:
+        return self.list_dir('/')
+
+    async def get_obj(self, full_path: str) -> Iterable[FSObjectDto] | Stream:
+        with self.get_session() as session:
+            target = session.get_by_path(full_path)
+            if not target:
+                raise HTTPException(status_code=404)
+            ph_path = self.root_dir / target.full_path[1:]
+            if not ph_path.exists():
+                raise HTTPException(status_code=500)
+
+            if target.type == FSObjectType.DIR:
+                return list(map(FSObjectDto.from_entity, target.children))
+
+            return Stream(
+                file_streamer(ph_path),
+                media_type=get_mime_type(target.name),
+            )
 
     async def create(
             self,
