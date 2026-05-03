@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Literal, Annotated
+from typing import List, Literal, Annotated, Optional
 
 from dotenv import load_dotenv
 from litestar import Litestar, get, post
@@ -11,18 +11,21 @@ from litestar.exceptions import HTTPException
 from litestar.params import Body
 from litestar.response import Stream
 
-from models import FSObjectDto, DirDto, FileDto
+from models import FSObjectDto
 from repo import FSRepository
+from repo_re import RepositoryFactory
+from service import FSService
 from utils import file_streamer, get_mime_type
 
 load_dotenv()
-ROOT_DIR = Path(os.environ.get('ROOT_DIR', '.')).resolve()
+ROOT_DIR = Path(os.environ.get('ROOT_DIR', '.')).absolute()
 if not ROOT_DIR.exists():
     ROOT_DIR.mkdir(parents=True)
 elif ROOT_DIR.is_file():
     raise FileExistsError(f'{ROOT_DIR} exists and is not a directory')
 
 repository = FSRepository()
+service = FSService(RepositoryFactory(), ROOT_DIR)
 
 
 @dataclass
@@ -84,56 +87,11 @@ async def get_obj(full_path: str) -> List[Item] | Stream:
 async def create_obj(
         full_path: str,
         isdir: str | None = None,
-        data: Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)] = None,
+        data: Optional[Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)]] = None,
 ) -> Item:
-    if full_path.endswith('/'):
-        full_path = full_path[:-1]
-    path = ROOT_DIR / full_path
-    if isdir is not None:
-
-        if path.exists():
-            print('file or dir exists')
-            raise HTTPException(status_code=400)
-        path.mkdir()
-
-        last_slash = full_path.rfind('/')
-        parent_path = full_path[:last_slash]
-        if not parent_path:
-            parent_path = '/'
-
-        with repository() as session:
-            dto = DirDto(
-                id=None,
-                name=path.name,
-                full_path=None,
-                ref_id=None,
-                parent_id=None,
-            )
-            dto = session.create(dto, parent_path)
-            return Item.from_dto(dto)
-
-    if not path.exists() or not path.is_dir():
-        print('target dir not found or is not a directory')
-        raise HTTPException(status_code=400)
-    file_path = path / data.filename
-    dup_idx = 0
-    while file_path.exists():
-        dup_idx += 1
-        file_path = file_path.with_stem(os.path.splitext(data.filename)[0] + f' ({dup_idx})')
-
-    content = await data.read()
-    with open(file_path, 'wb') as f:
-        f.write(content)
-    with repository() as session:
-        dto = FileDto(
-            id=None,
-            name=file_path.name,
-            full_path=None,
-            ref_id=None,
-            parent_id=None,
-        )
-        dto = session.create(dto, full_path)
-        return Item.from_dto(dto)
+    if full_path.startswith('/'):
+        full_path = full_path[1:]
+    return Item.from_dto(await service.create(full_path, isdir, data))
 
 
 app = Litestar([index, get_obj, create_obj])

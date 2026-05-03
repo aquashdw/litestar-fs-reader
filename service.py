@@ -1,7 +1,7 @@
 import os
 import uuid
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
@@ -24,7 +24,7 @@ class FSService:
             self,
             full_path: str,
             isdir: str | None = None,
-            data: Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)] = None,
+            data: Optional[Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)]] = None,
     ) -> FSObjectDto:
         if full_path.endswith('/'):
             full_path = full_path[:-1]
@@ -39,8 +39,9 @@ class FSService:
             raise HTTPException(status_code=400)
         path.mkdir()
         last_slash = full_path.rfind('/')
-        parent_path = full_path[:last_slash]
-        if not parent_path:
+        if last_slash != -1:
+            parent_path = full_path[:last_slash]
+        else:
             parent_path = '/'
 
         with self.get_session() as session:
