@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
@@ -61,21 +61,17 @@ class FSRepository(RepositorySession):
         self.session.add(root)
         return root
 
-    def create(self, fs_object: FSObject):
+    def create(self, fs_object: FSObject) -> FSObject:
         self.session.add(fs_object)
         self.session.flush()
         return fs_object
 
-    def get_by_id(self, pk: int) -> FSObject:
+    def get_by_id(self, pk: int) -> Optional[FSObject]:
         entity = self.session.get(FSObject, pk)
-        if not entity:
-            raise ValueError('not found')
         return entity
 
-    def get_by_path(self, full_path: str) -> FSObject:
+    def get_by_path(self, full_path: str) -> Optional[FSObject]:
         entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
-        if not entity:
-            raise ValueError('not found')
         return entity
 
     def listdir(self, dir_obj: FSObject) -> List[FSObject]:
