@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Optional
+from typing import List, Optional, Iterable
 
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
@@ -65,6 +65,12 @@ class FSRepository(RepositorySession):
         self.session.add(fs_object)
         self.session.flush()
         return fs_object
+
+    def delete(self, fs_object: FSObject) -> None:
+        self.session.delete(fs_object)
+
+    def update_all(self, fs_objects: Iterable[FSObject]) -> None:
+        self.session.add_all(fs_objects)
 
     def get_by_id(self, pk: int) -> Optional[FSObject]:
         entity = self.session.get(FSObject, pk)

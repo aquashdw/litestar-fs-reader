@@ -43,33 +43,33 @@ def compare_fs_db(root_dir: str = '.root', connection_string: str = 'sqlite:///t
                     'path_obj': obj,
                     'type': FSObjectType.FILE if obj.is_file() else FSObjectType.DIR,
                 }
-                print(len(fs_summary))
 
-                fd_db_diff = []
-                inner_dirs = []
-                for child in session.listdir(cwd):
-                    if child.name not in fs_summary:
-                        # TODO remove file from db, because it was removed in fs
-                        continue
-                    else:
-                        file = fs_summary.pop(child.name)
-                    if child.type != file['type']:
-                        child.type = file['type']
-                        fd_db_diff.append(child)
+            fs_db_diff = []
+            inner_dirs = []
+            for child in session.listdir(cwd):
+                if child.name not in fs_summary:
+                    print(f'{child.name} not found in fs')
+                    session.delete(child)
+                    continue
+                else:
+                    file = fs_summary.pop(child.name)
+                if child.type != file['type']:
+                    print(f'{child.name} was not {child.type}')
+                    child.type = file['type']
+                    fs_db_diff.append(child)
 
-                    if file['type'] == FSObjectType.DIR:
-                        inner_dirs.append((file['path_obj'], child))
-                    # TODO update db to match filesystem
+                if file['type'] == FSObjectType.DIR:
+                    inner_dirs.append((file['path_obj'], child))
 
-                print(len(fs_summary))
-                for inner_dir in inner_dirs:
-                    check_dir(*inner_dir)
+            session.update_all(fs_db_diff)
+            for inner_dir in inner_dirs:
+                check_dir(*inner_dir)
 
         check_dir(root_path, root_entity)
 
 
 if __name__ == "__main__":
-    start_path = "."
+    start_path = "./.root"
     # check_schema()
     # print(f"Starting recursive list from: {os.path.abspath(start_path)}\n")
     # list_recursive(start_path)
