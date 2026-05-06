@@ -40,7 +40,11 @@ class FSService:
                 raise HTTPException(status_code=500)
 
             if target.type == FSObjectType.DIR and ph_path.is_dir():
-                return list(map(FSObjectDto.from_entity, target.children))
+                listdir = list(map(FSObjectDto.from_entity, target.children))
+                parent_dto = FSObjectDto.from_entity(target.parent)
+                parent_dto.name = '..'
+                listdir.append(parent_dto)
+                return listdir
             elif target.type == FSObjectType.FILE and ph_path.is_file():
                 return Stream(
                     file_streamer(ph_path),
