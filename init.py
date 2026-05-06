@@ -1,12 +1,17 @@
 from pathlib import Path
 
+import config
+from beans import root_dir
 from models import FSObject, Base, FSObjectType
 from repo import RepositoryFactory, FSRepository
+
+ROOT_DIR = config.ROOT_DIR
+DB_URL = config.DB_URL
 
 repo_factory = RepositoryFactory()
 
 
-def check_schema(connection_string: str = 'sqlite:///test.sqlite'):
+def check_schema():
     """
     Check the database of connection string to see if required tables exists
     Create if it doesn't exist
@@ -22,15 +27,14 @@ def check_schema(connection_string: str = 'sqlite:///test.sqlite'):
         try:
             session.get_by_path('/')
         except ValueError:
-            print('root directory doest exist, creating')
+            print('root directory does\'nt exist, creating')
             session.create_root()
 
 
-def compare_fs_db(root_dir: str = '.root', connection_string: str = 'sqlite:///test.sqlite'):
+def compare_fs_db(root_dir: Path):
     """
     starting with root_dir, compare database records with the actual filesystem.
     """
-    root_path = Path(root_dir).absolute()
     with repo_factory(FSRepository) as session:
         root_entity = session.get_by_path('/')
 
@@ -65,14 +69,18 @@ def compare_fs_db(root_dir: str = '.root', connection_string: str = 'sqlite:///t
             for inner_dir in inner_dirs:
                 check_dir(*inner_dir)
 
-        check_dir(root_path, root_entity)
+        check_dir(root_dir, root_entity)
+
+
+def init():
+    check_schema()
+    if not root_dir.exists():
+        root_dir.mkdir(parents=True)
+    elif root_dir.is_file():
+        raise FileExistsError(f'{root_dir} exists and is not a directory')
+
+    compare_fs_db(root_dir)
 
 
 if __name__ == "__main__":
-    start_path = "./.root"
-    # check_schema()
-    # print(f"Starting recursive list from: {os.path.abspath(start_path)}\n")
-    # list_recursive(start_path)
-    # root = Path(start_path)
-    # print([file.name for file in root.iterdir()])
     compare_fs_db()

@@ -1,26 +1,16 @@
-import os
-from pathlib import Path
 from typing import List, Annotated, Optional, Iterable
 
-from dotenv import load_dotenv
 from litestar import Litestar, get, post
 from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
 from litestar.params import Body
 from litestar.response import Stream
 
+from beans import service
+from init import init
 from models import FSObjectDto
-from repo import RepositoryFactory
-from service import FSService
 
-load_dotenv()
-ROOT_DIR = Path(os.environ.get('ROOT_DIR', '.')).absolute()
-if not ROOT_DIR.exists():
-    ROOT_DIR.mkdir(parents=True)
-elif ROOT_DIR.is_file():
-    raise FileExistsError(f'{ROOT_DIR} exists and is not a directory')
-
-service = FSService(RepositoryFactory(), ROOT_DIR)
+init()
 
 
 @get('/')
