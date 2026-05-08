@@ -1,38 +1,14 @@
-from typing import List, Annotated, Optional, Iterable
+from litestar import Litestar, Router
 
-from litestar import Litestar, get, post
-from litestar.datastructures import UploadFile
-from litestar.enums import RequestEncodingType
-from litestar.params import Body
-from litestar.response import Stream
-
-from beans import service
+import fs_routes
 from init import init
-from models import FSObjectDto
 
-
-@get('/')
-async def index() -> Iterable[FSObjectDto]:
-    return service.list_root()
-
-
-@get('/{full_path:path}')
-async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
-    return await service.get_obj(full_path)
-
-
-@post('/{full_path:path}')
-async def create_obj(
-        full_path: str,
-        isdir: str | None = None,
-        data: Optional[Annotated[UploadFile, Body(media_type=RequestEncodingType.MULTI_PART)]] = None,
-) -> FSObjectDto:
-    if full_path.startswith('/'):
-        full_path = full_path[1:]
-    return await service.create(full_path, isdir, data)
-
+fs_router = Router(
+    path='/fs',
+    route_handlers=[*fs_routes.handlers]
+)
 
 app = Litestar(
-    route_handlers=[index, get_obj, create_obj],
+    route_handlers=[fs_router],
     on_startup=[init],
 )

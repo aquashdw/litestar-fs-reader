@@ -40,6 +40,7 @@ class FSObjectDto:
     id: Optional[int]
     name: str
     full_path: Optional[str]
+    href: Optional[str]
     ref_id: Optional[str]
     parent_id: Optional[int]
     type: Optional[str]
@@ -48,21 +49,26 @@ class FSObjectDto:
     def from_entity(cls, entity: FSObject):
         match entity.type:
             case FSObjectType.DIR:
-                return DirDto(
+                dto = DirDto(
                     id=entity.id,
                     name=entity.name,
                     full_path=entity.full_path,
+                    href='/fs' + entity.full_path,
                     ref_id=entity.ref_id,
                     parent_id=entity.parent_id,
                 )
             case FSObjectType.FILE:
-                return FileDto(
+                dto = FileDto(
                     id=entity.id,
                     name=entity.name,
                     full_path=entity.full_path,
+                    href='/fs' + entity.full_path,
                     ref_id=entity.ref_id,
                     parent_id=entity.parent_id,
                 )
+            case _:
+                raise ValueError('wrong type')
+        return dto
 
 
 @dataclass
