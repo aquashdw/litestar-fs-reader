@@ -30,15 +30,18 @@ def create_key(overwrite=False):
     key_path.mkdir(exist_ok=True)
     secret_path = key_path / 'private_key'
     secret_path.unlink(missing_ok=True)
-
-    public_path = key_path / 'public_key'
-    public_path.unlink(missing_ok=True)
-
     secret_key = PrivateKey.generate()
     secret_path.write_bytes(secret_key.encode())
 
+    public_path = key_path / 'public_key'
+    public_path.unlink(missing_ok=True)
     public_key = secret_key.public_key
     public_path.write_text(public_key.encode().hex())
+
+    hand_path = key_path / 'handshake'
+    hand_path.unlink(missing_ok=True)
+    hand_key = str(uuid.uuid4()).replace('-', '')
+    hand_path.write_text(hand_key)
 
 
 def get_decoder():
@@ -52,6 +55,12 @@ def get_decoder():
     return SealedBox(secret_key)
 
 
+def get_handshake():
+    key_path = Path(config.KEY_DIR)
+    hand_path = key_path / 'handshake'
+    return hand_path.read_text()
+
+
 def create_test_message():
     public_hex = (Path(config.KEY_DIR) / 'public_key').read_text()
     public_key = PublicKey(bytes.fromhex(public_hex))
@@ -62,5 +71,7 @@ def create_test_message():
     return encrypter.encrypt(session_id).hex()
 
 
-decoder = get_decoder()
-print(decoder.decrypt(bytes.fromhex(create_test_message())).hex())
+if __name__ == '__main__':
+    # create_key(True)
+    decoder = get_decoder()
+    print(decoder.decrypt(bytes.fromhex(create_test_message())).hex())

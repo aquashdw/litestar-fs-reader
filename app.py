@@ -10,8 +10,6 @@ from beans import service
 from init import init
 from models import FSObjectDto
 
-init()
-
 
 @get('/')
 async def index() -> Iterable[FSObjectDto]:
@@ -34,4 +32,7 @@ async def create_obj(
     return await service.create(full_path, isdir, data)
 
 
-app = Litestar([index, get_obj, create_obj])
+app = Litestar(
+    route_handlers=[index, get_obj, create_obj],
+    on_startup=[init],
+)

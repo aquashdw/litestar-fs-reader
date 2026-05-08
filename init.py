@@ -4,6 +4,7 @@ import config
 from beans import root_dir
 from models import FSObject, Base, FSObjectType
 from repo import RepositoryFactory, FSRepository
+from utils import create_key
 
 ROOT_DIR = config.ROOT_DIR
 DB_URL = config.DB_URL
@@ -29,6 +30,16 @@ def check_schema():
         except ValueError:
             print('root directory does\'nt exist, creating')
             session.create_root()
+
+
+def check_fs():
+    """
+    Configure filesystem or fail
+    """
+    if not root_dir.exists():
+        root_dir.mkdir(parents=True)
+    elif root_dir.is_file():
+        raise FileExistsError(f'{root_dir} exists and is not a directory')
 
 
 def compare_fs_db(root_dir: Path):
@@ -74,13 +85,10 @@ def compare_fs_db(root_dir: Path):
 
 def init():
     check_schema()
-    if not root_dir.exists():
-        root_dir.mkdir(parents=True)
-    elif root_dir.is_file():
-        raise FileExistsError(f'{root_dir} exists and is not a directory')
-
+    check_fs()
     compare_fs_db(root_dir)
+    create_key()
 
 
 if __name__ == "__main__":
-    compare_fs_db()
+    pass
