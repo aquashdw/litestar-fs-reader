@@ -72,9 +72,9 @@ def create_test_message():
     public_hex = (Path(config.KEY_DIR) / 'public_key').read_text()
     public_key = PublicKey(bytes.fromhex(public_hex))
     encrypter = SealedBox(public_key)
-    prefix_uuid = uuid.uuid4()
+    handshake = get_handshake()
     session_uuid = uuid.uuid4()
-    message = str(prefix_uuid).replace('-', '') + ':' + str(session_uuid).replace('-', '')
+    message = str(handshake).replace('-', '') + ':' + str(session_uuid).replace('-', '')
     print(f'created message: {message}')
     return encrypter.encrypt(message.encode()).hex()
 
