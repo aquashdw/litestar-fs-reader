@@ -44,7 +44,13 @@ def create_key(overwrite=False):
     hand_path.write_text(hand_key)
 
 
+decoder = None
+
+
 def get_decoder():
+    global decoder
+    if decoder:
+        return decoder
     key_path = Path(config.KEY_DIR)
     secret_path = key_path / 'private_key'
     if not secret_path.exists():
@@ -52,7 +58,8 @@ def get_decoder():
         create_key(True)
 
     secret_key = PrivateKey(secret_path.read_bytes())
-    return SealedBox(secret_key)
+    decoder = SealedBox(secret_key)
+    return decoder
 
 
 def get_handshake():
@@ -65,13 +72,19 @@ def create_test_message():
     public_hex = (Path(config.KEY_DIR) / 'public_key').read_text()
     public_key = PublicKey(bytes.fromhex(public_hex))
     encrypter = SealedBox(public_key)
+    prefix_uuid = uuid.uuid4()
     session_uuid = uuid.uuid4()
-    print(f'created message: {str(session_uuid).replace('-', '')}')
-    session_id = session_uuid.bytes
-    return encrypter.encrypt(session_id).hex()
+    message = str(prefix_uuid).replace('-', '') + ':' + str(session_uuid).replace('-', '')
+    print(f'created message: {message}')
+    return encrypter.encrypt(message.encode()).hex()
 
 
 if __name__ == '__main__':
     # create_key(True)
     decoder = get_decoder()
-    print(decoder.decrypt(bytes.fromhex(create_test_message())).hex())
+    message = create_test_message()
+    print(message)
+    decrypted = decoder.decrypt(bytes.fromhex(message))
+    print(decrypted)
+    print(decrypted.decode())
+    # print(decoder.decrypt(b'randomtextrandomtextrandomtextrandomtextasdfasdf'))
