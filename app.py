@@ -1,6 +1,8 @@
 from litestar import Litestar, Router
+from litestar.middleware import DefineMiddleware
 
-import auth_routes
+from auth.routes import handlers as auth_handlers
+from auth.service import NamelessSessionAuthMiddleware
 from fs.routes import handlers as fs_handlers
 from init import init
 
@@ -11,10 +13,13 @@ fs_router = Router(
 
 auth_router = Router(
     path='/auth',
-    route_handlers=[*auth_routes.handlers]
+    route_handlers=[*auth_handlers]
 )
+
+auth_middleware = DefineMiddleware(NamelessSessionAuthMiddleware, exclude=['/auth/session'])
 
 app = Litestar(
     route_handlers=[fs_router, auth_router],
+    middleware=[auth_middleware],
     on_startup=[init],
 )

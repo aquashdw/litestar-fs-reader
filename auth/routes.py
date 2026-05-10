@@ -5,9 +5,10 @@ from litestar.exceptions import HTTPException
 from litestar.params import Parameter
 from nacl.exceptions import CryptoError
 
+from auth.service import NamelessSessionAuthMiddleware
 from utils import get_decoder, get_handshake
 
-authenticated = set()
+authenticated = NamelessSessionAuthMiddleware.authenticated
 
 
 @post('/session', status_code=204)
@@ -17,7 +18,7 @@ async def create_session(
     if bearer is None or not bearer.startswith('Bearer '):
         raise HTTPException(status_code=401)
 
-    token = bearer[7:]
+    token = bearer.split()[1]
     try:
         decrypted = get_decoder().decrypt(bytes.fromhex(token)).decode()
         handshake, session_id = decrypted.split(':')

@@ -68,23 +68,30 @@ def get_handshake():
     return hand_path.read_text()
 
 
-def create_test_message():
+def create_test_message(message):
     public_hex = (Path(config.KEY_DIR) / 'public_key').read_text()
     public_key = PublicKey(bytes.fromhex(public_hex))
     encrypter = SealedBox(public_key)
-    handshake = get_handshake()
-    session_uuid = uuid.uuid4()
-    message = str(handshake).replace('-', '') + ':' + str(session_uuid).replace('-', '')
-    print(f'created message: {message}')
+    print(f'encrypting message to hex: {message}')
     return encrypter.encrypt(message.encode()).hex()
 
 
 if __name__ == '__main__':
     # create_key(True)
     decoder = get_decoder()
-    message = create_test_message()
-    print(message)
+
+    # test encrypt handshake + session pair
+    handshake = get_handshake()
+    session_uuid = uuid.uuid4()
+    message = create_test_message(str(handshake).replace('-', '') + ':' + str(session_uuid).replace('-', ''))
     decrypted = decoder.decrypt(bytes.fromhex(message))
     print(decrypted)
     print(decrypted.decode())
+
+    # test session id decrypt
+    session_id = 'd36c61e77f284a85aae0e79d112b4b97'
+    encrypted = create_test_message(session_id)
+    print(encrypted)
+
+    # test decrypt failure
     # print(decoder.decrypt(b'randomtextrandomtextrandomtextrandomtextasdfasdf'))
