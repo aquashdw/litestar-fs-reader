@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import config
-from beans import root_dir
-from models import FSObject, Base, FSObjectType
-from repo import RepositoryFactory, FSRepository
+from fs.models import FSObject, Base, FSObjectType
+from fs.repo import RepositoryFactory, FSRepository
+from singletons import root_dir
 from utils import create_key
 
 ROOT_DIR = config.ROOT_DIR

@@ -6,8 +6,8 @@ from litestar.enums import RequestEncodingType
 from litestar.params import Body
 from litestar.response import Stream
 
-from beans import service
-from models import FSObjectDto
+from singletons import service
+from .models import FSObjectDto
 
 
 @get('/')

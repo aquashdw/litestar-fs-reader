@@ -1,12 +1,12 @@
 from litestar import Litestar, Router
 
 import auth_routes
-import fs_routes
+from fs.routes import handlers as fs_handlers
 from init import init
 
 fs_router = Router(
     path='/fs',
-    route_handlers=[*fs_routes.handlers]
+    route_handlers=[*fs_handlers]
 )
 
 auth_router = Router(

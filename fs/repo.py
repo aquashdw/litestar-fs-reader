@@ -4,7 +4,7 @@ from typing import List, Optional, Iterable
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
 
-from models import FSObject, FSObjectType
+from .models import FSObject, FSObjectType
 
 
 class RepositorySession(ABC):
