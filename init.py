@@ -1,13 +1,10 @@
+import uuid
 from pathlib import Path
 
-import config
 from fs.models import FSObject, Base, FSObjectType
 from fs.repo import RepositoryFactory, FSRepository
 from singletons import root_dir
 from utils import create_key
-
-ROOT_DIR = config.ROOT_DIR
-DB_URL = config.DB_URL
 
 repo_factory = RepositoryFactory()
 
@@ -25,10 +22,8 @@ def check_schema():
         Base.metadata.create_all(repo_factory.engine)
 
     with repo_factory(FSRepository) as session:
-        try:
-            session.get_by_path('/')
-        except ValueError:
-            print('root directory does\'nt exist, creating')
+        if not session.get_by_path('/'):
+            print('root directory doesn\'t exist, creating')
             session.create_root()
 
 
@@ -76,6 +71,21 @@ def compare_fs_db(root_dir: Path):
                 if file['type'] == FSObjectType.DIR:
                     inner_dirs.append((file['path_obj'], child))
 
+            for key in fs_summary:
+                name = key
+                full_path = (Path(cwd.full_path) / name).as_posix()
+                ref_id = str(uuid.uuid4()).replace('-', '')
+                file_type = fs_summary[name]['type']
+                new_file = session.create(FSObject(
+                    name=name,
+                    full_path=full_path,
+                    ref_id=ref_id,
+                    type=file_type,
+                    parent=cwd,
+                ))
+                if new_file.type == FSObjectType.DIR:
+                    inner_dirs.append((fs_summary[name]['path_obj'], new_file))
+
             session.update_all(fs_db_diff)
             for inner_dir in inner_dirs:
                 check_dir(*inner_dir)
@@ -91,4 +101,5 @@ def init():
 
 
 if __name__ == "__main__":
-    pass
+    check_schema()
+    compare_fs_db(root_dir)
