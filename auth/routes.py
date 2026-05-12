@@ -5,10 +5,10 @@ from litestar.exceptions import HTTPException
 from litestar.params import Parameter
 from nacl.exceptions import CryptoError
 
-from auth.service import NamelessSessionAuthMiddleware
+from auth.service import session_manager
 from utils import get_decoder, get_handshake
 
-authenticated = NamelessSessionAuthMiddleware.authenticated
+authenticated = session_manager
 
 
 @post('/session', status_code=204)
@@ -24,7 +24,6 @@ async def create_session(
         handshake, session_id = decrypted.split(':')
         if handshake != get_handshake():
             raise HTTPException(status_code=401)
-        # TODO: manage session id with more functionalities
         authenticated.add(session_id)
         print(authenticated)
         return None

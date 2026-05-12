@@ -7,5 +7,6 @@ dependencies = [
     "litestar[standard]>=2.19.0",
     "pynacl>=1.6.2",
     "python-dotenv>=1.2.1",
+    "redis[hiredis]>=7.4.0",
     "sqlalchemy>=2.0.45",
 ]
