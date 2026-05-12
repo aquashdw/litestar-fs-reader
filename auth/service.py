@@ -18,12 +18,12 @@ class AuthRedisClient:
         self.redis.hset('fs-session', mapping={
             session_id: now
         })
-        self.redis.hexpire('fs-session', 300, session_id)
+        self.redis.hexpire('fs-session', 3060, session_id)
 
     def __contains__(self, session_id):
         exists = self.redis.hexists('fs-session', session_id)
         if exists:
-            self.redis.hexpire('fs-session', 300, session_id)
+            self.redis.hexpire('fs-session', 3600, session_id)
         return exists
 
     def __str__(self):
