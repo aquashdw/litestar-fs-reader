@@ -84,14 +84,15 @@ if __name__ == '__main__':
     handshake = get_handshake()
     session_uuid = uuid.uuid4()
     message = create_test_message(str(handshake).replace('-', '') + ':' + str(session_uuid).replace('-', ''))
-    decrypted = decoder.decrypt(bytes.fromhex(message))
-    print(decrypted)
-    print(decrypted.decode())
+    print(f'handshake: {message}')
+    # decrypted = decoder.decrypt(bytes.fromhex(message))
+    # print(decrypted)
+    # print(decrypted.decode())
 
-    # test session id decrypt
-    session_id = 'd36c61e77f284a85aae0e79d112b4b97'
+    # test session id encrypt
+    session_id = str(session_uuid).replace('-', '')
     encrypted = create_test_message(session_id)
-    print(encrypted)
+    print(f'sessionid encrypted: {encrypted}')
 
     # test decrypt failure
     # print(decoder.decrypt(b'randomtextrandomtextrandomtextrandomtextasdfasdf'))
