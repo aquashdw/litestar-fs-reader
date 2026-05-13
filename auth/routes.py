@@ -5,7 +5,7 @@ from litestar.exceptions import HTTPException
 from litestar.params import Parameter
 from nacl.exceptions import CryptoError
 
-from auth.service import session_manager
+from auth.components import session_manager
 from utils import get_decoder, get_handshake
 
 authenticated = session_manager
@@ -25,7 +25,6 @@ async def create_session(
         if handshake != get_handshake():
             raise HTTPException(status_code=401)
         authenticated.add(session_id)
-        print(authenticated)
         return None
     except CryptoError:
         raise HTTPException(status_code=401)

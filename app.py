@@ -1,8 +1,8 @@
 from litestar import Litestar, Router
 from litestar.middleware import DefineMiddleware
 
+from auth.components import NamelessSessionAuthMiddleware
 from auth.routes import handlers as auth_handlers
-from auth.service import NamelessSessionAuthMiddleware
 from fs.routes import handlers as fs_handlers
 from init import init
 
