@@ -27,11 +27,12 @@ class FSObject(Base):
     parent: Mapped[Type['FSObject'] | None] = relationship(
         'FSObject',
         remote_side=[id],
-        back_populates='children'
+        back_populates='children',
     )
     children: Mapped[List['FSObject'] | None] = relationship(
         'FSObject',
         back_populates='parent',
+        cascade='all, delete-orphan',
     )
 
 
