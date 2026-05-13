@@ -94,8 +94,8 @@ def compare_fs_db(root_dir: Path):
 
 
 def init():
-    check_schema()
     check_fs()
+    check_schema()
     compare_fs_db(root_dir)
     create_key()
 
