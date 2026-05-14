@@ -64,6 +64,8 @@ class FSService:
 
         with self.get_session() as session:
             parent = session.get_by_path(parent_path)
+            if not parent:
+                raise HTTPException(status_code=400)
             new_dir = session.create(FSObject(
                 name=path.name,
                 full_path=(Path(parent.full_path) / path.name).as_posix(),
@@ -95,6 +97,8 @@ class FSService:
             name = file_path.name
             target_dir = target_dir if target_dir else '/'
             parent = session.get_by_path(target_dir)
+            if not parent:
+                raise HTTPException(status_code=400)
             new_file = session.create(FSObject(
                 name=name,
                 full_path=(Path(parent.full_path) / name).as_posix(),
