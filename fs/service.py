@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 from pathlib import Path
 from typing import Iterable
@@ -107,3 +108,22 @@ class FSService:
                 parent_id=parent.id,
             ))
             return FileDto.from_entity(new_file)
+
+    async def delete(self, full_path: str, rmtree: bool):
+        with self.get_session() as session:
+            target = session.get_by_path(full_path)
+            if not target:
+                raise HTTPException(status_code=404)
+
+            path = self.root_dir / full_path[1:]
+
+            if target.type == FSObjectType.FILE:
+                path.unlink(missing_ok=True)
+                session.delete(target)
+                return
+
+            if not (target.children or rmtree):
+                raise HTTPException(status_code=400)
+
+            shutil.rmtree(path)
+            session.delete(target)
