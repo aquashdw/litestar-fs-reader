@@ -109,6 +109,19 @@ class FSService:
             ))
             return FileDto.from_entity(new_file)
 
+    async def rename_dir(self, full_path: str, new_name: str):
+        with self.get_session() as session:
+            target = session.get_by_path(full_path)
+            if not target:
+                raise HTTPException(status_code=404)
+
+            siblings = set(child.name for child in target.parent.children)
+            if new_name in siblings:
+                raise HTTPException(status_code=400)
+
+            target.name = new_name
+            return DirDto.from_entity(target)
+
     async def delete(self, full_path: str, rmtree: bool):
         with self.get_session() as session:
             target = session.get_by_path(full_path)
