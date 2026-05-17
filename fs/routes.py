@@ -48,15 +48,11 @@ async def create_obj_root(
 @patch('/{full_path:path}')
 async def rename(
         full_path: str,
-        request: Request,
         data: FSObjectDto,
 ) -> FSObjectDto:
     if full_path.endswith('/'):
         full_path = full_path[:-1]
-    if 'isdir' in request.query_params:
-        return service.rename_dir(full_path, data.name)
-    if data.name:
-        pass
+    return service.rename(full_path, data.name)
 
 
 @delete('/{full_path:path}', status_code=204)
