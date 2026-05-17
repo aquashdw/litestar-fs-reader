@@ -119,7 +119,23 @@ class FSService:
             if new_name in siblings:
                 raise HTTPException(status_code=400)
 
-            target.name = new_name
+            old_name_start = full_path.rfind('/') + 1
+            old_name_end = len(full_path)
+
+            def rename_recursive(now: FSObject):
+                test_name = now.full_path
+                renamed = test_name[:old_name_start] + new_name + test_name[old_name_end:]
+                print(renamed)
+                if not now.children:
+                    return
+                for child in now.children:
+                    rename_recursive(child)
+
+            rename_recursive(target)
+
+            # print(full_path[old_name_start:old_name_end])
+
+            # target.name = new_name
             return DirDto.from_entity(target)
 
     async def delete(self, full_path: str, rmtree: bool):
