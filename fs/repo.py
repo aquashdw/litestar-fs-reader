@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import List, Optional, Iterable
 
-from sqlalchemy import create_engine, inspect, select
+from sqlalchemy import create_engine, inspect, select, exists
 from sqlalchemy.orm import sessionmaker
 
 from .models import FSObject, FSObjectType
@@ -79,6 +79,9 @@ class FSRepository(RepositorySession):
     def get_by_path(self, full_path: str) -> Optional[FSObject]:
         entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
         return entity
+
+    def exists_by_path(self, full_path: str) -> bool:
+        return self.session.scalar(exists().where(FSObject.full_path == full_path).select())
 
     def listdir(self, dir_obj: FSObject) -> List[FSObject]:
         return self.session.scalars(select(FSObject).where(FSObject.parent_id == dir_obj.id))

@@ -77,6 +77,34 @@ class FSService:
             return DirDto.from_entity(new_dir)
 
     async def create_file(self, target_dir, data) -> FileDto:
+        with self.get_session() as session:
+            parent = session.get_by_path(target_dir)
+            if not parent:
+                raise HTTPException(status_code=400)
+
+            full_path = (Path(parent.full_path) / data.filename)
+            dup_idx = 0
+            while session.exists_by_path(full_path.as_posix()):
+                dup_idx += 1
+                full_path = full_path.with_stem(Path(data.filename).stem + f' ({dup_idx})')
+
+            print(full_path.as_posix())
+
+        file_ext = Path(data.filename).suffix
+        ref_id = str(uuid.uuid4()).replace('-', '')
+        write_path = self.root_dir / ref_id
+
+        # temporary file copy to reuse for legacy
+        file_copy = []
+
+        with open(write_path, 'wb') as f:
+            chunk_size = 1024 * 1024
+            chunk = await data.read(chunk_size)
+            while chunk:
+                file_copy.append(chunk)
+                f.write(chunk)
+                chunk = await data.read(chunk_size)
+
         path = self.root_dir / target_dir[1:]
 
         if not path.exists() or not path.is_dir():
@@ -88,11 +116,8 @@ class FSService:
             file_path = file_path.with_stem(os.path.splitext(data.filename)[0] + f' ({dup_idx})')
 
         with open(file_path, 'wb') as f:
-            chunk_size = 1024 * 1024
-            chunk = await data.read(chunk_size)
-            while chunk:
+            for chunk in file_copy:
                 f.write(chunk)
-                chunk = await data.read(chunk_size)
 
         with self.get_session() as session:
             name = file_path.name
