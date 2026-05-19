@@ -1,4 +1,3 @@
-import os
 import shutil
 import uuid
 from pathlib import Path
@@ -90,45 +89,25 @@ class FSService:
 
             print(full_path.as_posix())
 
-        file_ext = Path(data.filename).suffix
-        ref_id = str(uuid.uuid4()).replace('-', '')
-        write_path = self.root_dir / ref_id
+            ref_id = str(uuid.uuid4()).replace('-', '')
+            write_path = self.root_dir / ref_id
 
-        # temporary file copy to reuse for legacy
-        file_copy = []
-
-        with open(write_path, 'wb') as f:
-            chunk_size = 1024 * 1024
-            chunk = await data.read(chunk_size)
-            while chunk:
-                file_copy.append(chunk)
-                f.write(chunk)
+            with open(write_path, 'wb') as f:
+                chunk_size = 1024 * 1024
                 chunk = await data.read(chunk_size)
+                while chunk:
+                    f.write(chunk)
+                    chunk = await data.read(chunk_size)
 
-        path = self.root_dir / target_dir[1:]
-
-        if not path.exists() or not path.is_dir():
-            raise HTTPException(status_code=400)
-        file_path = path / data.filename
-        dup_idx = 0
-        while file_path.exists():
-            dup_idx += 1
-            file_path = file_path.with_stem(os.path.splitext(data.filename)[0] + f' ({dup_idx})')
-
-        with open(file_path, 'wb') as f:
-            for chunk in file_copy:
-                f.write(chunk)
-
-        with self.get_session() as session:
-            name = file_path.name
+            name = full_path.name
             target_dir = target_dir if target_dir else '/'
             parent = session.get_by_path(target_dir)
             if not parent:
                 raise HTTPException(status_code=400)
             new_file = session.create(FSObject(
-                name=name,
-                full_path=(Path(parent.full_path) / name).as_posix(),
-                ref_id=str(uuid.uuid4()).replace('-', ''),
+                name=data.filename,
+                full_path=full_path.as_posix(),
+                ref_id=ref_id,
                 type=FSObjectType.FILE,
                 parent_id=parent.id,
             ))
