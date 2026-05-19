@@ -59,7 +59,7 @@ def compare_fs_db(root_dir: Path):
             for child in session.listdir(cwd):
                 if child.name not in fs_summary:
                     print(f'{child.name} not found in fs')
-                    session.delete(child)
+                    # session.delete(child)
                     continue
                 else:
                     file = fs_summary.pop(child.name)

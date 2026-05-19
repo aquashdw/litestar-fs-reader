@@ -32,6 +32,14 @@ class FSService:
             target = session.get_by_path(full_path)
             if not target:
                 raise HTTPException(status_code=404)
+
+            if target.type == FSObjectType.FILE:
+                ref_id = target.ref_id
+                return Stream(
+                    file_streamer(self.root_dir / ref_id),
+                    media_type=get_mime_type(target.name),
+                )
+
             ph_path = self.root_dir / target.full_path[1:]
             if not ph_path.exists():
                 raise HTTPException(status_code=500)
