@@ -2,11 +2,9 @@ import uuid
 from pathlib import Path
 
 from fs.models import FSObject, Base, FSObjectType
-from fs.repo import RepositoryFactory, FSRepository
-from singletons import root_dir
+from fs.repo import FSRepository
+from singletons import root_dir, repo_factory
 from utils import create_key
-
-repo_factory = RepositoryFactory()
 
 
 def check_schema():

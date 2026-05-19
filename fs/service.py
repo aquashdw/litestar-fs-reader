@@ -39,44 +39,33 @@ class FSService:
                     file_streamer(self.root_dir / ref_id),
                     media_type=get_mime_type(target.name),
                 )
-
-            ph_path = self.root_dir / target.full_path[1:]
-            if not ph_path.exists():
-                raise HTTPException(status_code=500)
-
-            if target.type == FSObjectType.DIR and ph_path.is_dir():
+            elif target.type == FSObjectType.DIR:
                 listdir = list(map(FSObjectDto.from_entity, target.children))
                 parent_dto = FSObjectDto.from_entity(target.parent)
                 parent_dto.name = '..'
                 listdir.append(parent_dto)
                 return listdir
-            elif target.type == FSObjectType.FILE and ph_path.is_file():
-                return Stream(
-                    file_streamer(ph_path),
-                    media_type=get_mime_type(target.name),
-                )
-            # file dir missmatch
+
             raise HTTPException(status_code=500)
 
     def create_dir(self, full_path: str) -> DirDto:
-        path = self.root_dir / full_path[1:]
-        if path.exists():
-            print('file or dir exists')
-            raise HTTPException(status_code=400)
-        path.mkdir()
-        last_slash = full_path.rfind('/')
-        if last_slash == 0:
-            parent_path = '/'
-        else:
-            parent_path = full_path[:last_slash]
-
         with self.get_session() as session:
+            if session.exists_by_path(full_path):
+                raise HTTPException(status_code=400)
+
+            last_slash = full_path.rfind('/')
+            if last_slash == 0:
+                parent_path = '/'
+            else:
+                parent_path = full_path[:last_slash]
+            name = full_path[last_slash:]
+            
             parent = session.get_by_path(parent_path)
             if not parent:
                 raise HTTPException(status_code=400)
             new_dir = session.create(FSObject(
-                name=path.name,
-                full_path=(Path(parent.full_path) / path.name).as_posix(),
+                name=name,
+                full_path=full_path,
                 ref_id=str(uuid.uuid4()).replace('-', ''),
                 type=FSObjectType.DIR,
                 parent_id=parent.id,
@@ -107,7 +96,6 @@ class FSService:
                     f.write(chunk)
                     chunk = await data.read(chunk_size)
 
-            name = full_path.name
             target_dir = target_dir if target_dir else '/'
             parent = session.get_by_path(target_dir)
             if not parent:
