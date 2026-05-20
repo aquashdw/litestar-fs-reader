@@ -36,6 +36,7 @@ def check_fs():
 
 
 def compare_fs_db(root_dir: Path):
+    # TODO swap to checking only files
     """
     starting with root_dir, compare database records with the actual filesystem.
     """
@@ -74,13 +75,20 @@ def compare_fs_db(root_dir: Path):
                 full_path = (Path(cwd.full_path) / name).as_posix()
                 ref_id = str(uuid.uuid4()).replace('-', '')
                 file_type = fs_summary[name]['type']
-                new_file = session.create(FSObject(
+                # new_file = session.create(FSObject(
+                #     name=name,
+                #     full_path=full_path,
+                #     ref_id=ref_id,
+                #     type=file_type,
+                #     parent=cwd,
+                # ))
+                new_file = FSObject(
                     name=name,
                     full_path=full_path,
                     ref_id=ref_id,
                     type=file_type,
                     parent=cwd,
-                ))
+                )
                 if new_file.type == FSObjectType.DIR:
                     inner_dirs.append((fs_summary[name]['path_obj'], new_file))
 
@@ -94,7 +102,7 @@ def compare_fs_db(root_dir: Path):
 def init():
     check_fs()
     check_schema()
-    compare_fs_db(root_dir)
+    # compare_fs_db(root_dir)
     create_key()
 
 

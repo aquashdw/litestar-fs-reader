@@ -1,4 +1,3 @@
-import shutil
 import uuid
 from pathlib import Path
 from typing import Iterable
@@ -59,7 +58,7 @@ class FSService:
             else:
                 parent_path = full_path[:last_slash]
             name = full_path[last_slash:]
-            
+
             parent = session.get_by_path(parent_path)
             if not parent:
                 raise HTTPException(status_code=400)
@@ -115,15 +114,15 @@ class FSService:
             if not target:
                 raise HTTPException(status_code=404)
 
-            path = self.root_dir / full_path[1:]
-
             if target.type == FSObjectType.FILE:
-                path.unlink(missing_ok=True)
+                (self.root_dir / target.ref_id).unlink(missing_ok=True)
                 session.delete(target)
                 return
 
-            if not (target.children or rmtree):
-                raise HTTPException(status_code=400)
+            elif target.type == FSObjectType.DIR:
+                for file in session.read_all_descendant_files(full_path):
+                    (self.root_dir / file.ref_id).unlink(missing_ok=True)
+                session.delete(target)
+                return
 
-            shutil.rmtree(path)
-            session.delete(target)
+            raise HTTPException(status_code=500)

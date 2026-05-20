@@ -83,5 +83,12 @@ class FSRepository(RepositorySession):
     def exists_by_path(self, full_path: str) -> bool:
         return self.session.scalar(exists().where(FSObject.full_path == full_path).select())
 
+    def read_all_descendant_files(self, full_path: str) -> Iterable[FSObject]:
+        return self.session.scalars(
+            select(FSObject).where(
+                FSObject.full_path.like(f"{full_path}/%"),
+                FSObject.type == FSObjectType.FILE)
+        )
+
     def listdir(self, dir_obj: FSObject) -> List[FSObject]:
         return self.session.scalars(select(FSObject).where(FSObject.parent_id == dir_obj.id))
