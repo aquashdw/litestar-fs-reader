@@ -1,6 +1,6 @@
 from typing import List, Iterable, Optional
 
-from litestar import get, post, Request, delete
+from litestar import get, post, Request, delete, patch
 from litestar.response import Stream
 
 from singletons import service
@@ -45,6 +45,16 @@ async def create_obj_root(
     return service.create_file(full_path, data)
 
 
+@patch('/{full_path:path}')
+async def rename(
+        full_path: str,
+        data: FSObjectDto,
+) -> FSObjectDto:
+    if full_path.endswith('/'):
+        full_path = full_path[:-1]
+    return service.rename(full_path, data.name)
+
+
 @delete('/{full_path:path}', status_code=204)
 async def delete_target(
         full_path: str,
@@ -55,4 +65,4 @@ async def delete_target(
     await service.delete(full_path, rmtree is not None)
 
 
-handlers = [index, get_obj, create_obj, create_obj_root, delete_target]
+handlers = [index, get_obj, create_obj, create_obj_root, rename, delete_target]

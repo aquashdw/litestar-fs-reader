@@ -38,13 +38,13 @@ class FSObject(Base):
 
 @dataclass
 class FSObjectDto:
-    id: Optional[int]
     name: str
-    full_path: Optional[str]
-    href: Optional[str]
-    ref_id: Optional[str]
-    parent_id: Optional[int]
-    type: Optional[str]
+    id: Optional[int] = None
+    full_path: Optional[str] = None
+    href: Optional[str] = None
+    ref_id: Optional[str] = None
+    parent_id: Optional[int] = None
+    type: Optional[str] = None
 
     @classmethod
     def from_entity(cls, entity: FSObject):

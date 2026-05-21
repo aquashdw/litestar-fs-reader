@@ -108,6 +108,37 @@ class FSService:
             ))
             return FileDto.from_entity(new_file)
 
+    async def rename(self, full_path: str, new_name: str):
+        with self.get_session() as session:
+            target = session.get_by_path(full_path)
+            if not target:
+                raise HTTPException(status_code=404)
+
+            siblings = set(child.name for child in target.parent.children)
+            if new_name in siblings:
+                raise HTTPException(status_code=400)
+
+            old_name_start = full_path.rfind('/') + 1
+            new_basepath = full_path[:old_name_start] + new_name
+            old_name_end = len(full_path)
+            target.name = new_name
+            target.full_path = new_basepath
+            if target.type == FSObjectType.FILE:
+                return FileDto.from_entity(target)
+
+            def rename_recursive(now: FSObject):
+                origin_path = now.full_path
+                renamed_path = new_basepath + origin_path[old_name_end:]
+                now.full_path = renamed_path
+                if not now.children:
+                    return
+                for child in now.children:
+                    rename_recursive(child)
+
+            rename_recursive(target)
+
+            return DirDto.from_entity(target)
+
     async def delete(self, full_path: str, rmtree: bool):
         with self.get_session() as session:
             target = session.get_by_path(full_path)
