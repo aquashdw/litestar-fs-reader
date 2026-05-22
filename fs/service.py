@@ -151,6 +151,8 @@ class FSService:
                 return
 
             elif target.type == FSObjectType.DIR:
+                if not rmtree:
+                    raise HTTPException(status_code=403)
                 for file in session.read_all_descendant_files(full_path):
                     (self.root_dir / file.ref_id).unlink(missing_ok=True)
                 session.delete(target)
