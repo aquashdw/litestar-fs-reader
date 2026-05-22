@@ -1,5 +1,3 @@
-import os
-import shutil
 import uuid
 from pathlib import Path
 from typing import Iterable
@@ -33,43 +31,40 @@ class FSService:
             target = session.get_by_path(full_path)
             if not target:
                 raise HTTPException(status_code=404)
-            ph_path = self.root_dir / target.full_path[1:]
-            if not ph_path.exists():
-                raise HTTPException(status_code=500)
 
-            if target.type == FSObjectType.DIR and ph_path.is_dir():
+            if target.type == FSObjectType.FILE:
+                ref_id = target.ref_id
+                return Stream(
+                    file_streamer(self.root_dir / ref_id),
+                    media_type=get_mime_type(target.name),
+                )
+            elif target.type == FSObjectType.DIR:
                 listdir = list(map(FSObjectDto.from_entity, target.children))
                 parent_dto = FSObjectDto.from_entity(target.parent)
                 parent_dto.name = '..'
                 listdir.append(parent_dto)
                 return listdir
-            elif target.type == FSObjectType.FILE and ph_path.is_file():
-                return Stream(
-                    file_streamer(ph_path),
-                    media_type=get_mime_type(target.name),
-                )
-            # file dir missmatch
+
             raise HTTPException(status_code=500)
 
     def create_dir(self, full_path: str) -> DirDto:
-        path = self.root_dir / full_path[1:]
-        if path.exists():
-            print('file or dir exists')
-            raise HTTPException(status_code=400)
-        path.mkdir()
-        last_slash = full_path.rfind('/')
-        if last_slash == 0:
-            parent_path = '/'
-        else:
-            parent_path = full_path[:last_slash]
-
         with self.get_session() as session:
+            if session.exists_by_path(full_path):
+                raise HTTPException(status_code=400)
+
+            last_slash = full_path.rfind('/')
+            if last_slash == 0:
+                parent_path = '/'
+            else:
+                parent_path = full_path[:last_slash]
+            name = full_path[last_slash:]
+
             parent = session.get_by_path(parent_path)
             if not parent:
                 raise HTTPException(status_code=400)
             new_dir = session.create(FSObject(
-                name=path.name,
-                full_path=(Path(parent.full_path) / path.name).as_posix(),
+                name=name,
+                full_path=full_path,
                 ref_id=str(uuid.uuid4()).replace('-', ''),
                 type=FSObjectType.DIR,
                 parent_id=parent.id,
@@ -77,37 +72,67 @@ class FSService:
             return DirDto.from_entity(new_dir)
 
     async def create_file(self, target_dir, data) -> FileDto:
-        path = self.root_dir / target_dir[1:]
-
-        if not path.exists() or not path.is_dir():
-            raise HTTPException(status_code=400)
-        file_path = path / data.filename
-        dup_idx = 0
-        while file_path.exists():
-            dup_idx += 1
-            file_path = file_path.with_stem(os.path.splitext(data.filename)[0] + f' ({dup_idx})')
-
-        with open(file_path, 'wb') as f:
-            chunk_size = 1024 * 1024
-            chunk = await data.read(chunk_size)
-            while chunk:
-                f.write(chunk)
-                chunk = await data.read(chunk_size)
-
         with self.get_session() as session:
-            name = file_path.name
+            parent = session.get_by_path(target_dir)
+            if not parent:
+                raise HTTPException(status_code=400)
+
+            full_path = (Path(parent.full_path) / data.filename)
+            dup_idx = 0
+            while session.exists_by_path(full_path.as_posix()):
+                dup_idx += 1
+                full_path = full_path.with_stem(Path(data.filename).stem + f' ({dup_idx})')
+
+            print(full_path.as_posix())
+
+            ref_id = str(uuid.uuid4()).replace('-', '')
+            write_path = self.root_dir / ref_id
+
+            with open(write_path, 'wb') as f:
+                chunk_size = 1024 * 1024
+                chunk = await data.read(chunk_size)
+                while chunk:
+                    f.write(chunk)
+                    chunk = await data.read(chunk_size)
+
             target_dir = target_dir if target_dir else '/'
             parent = session.get_by_path(target_dir)
             if not parent:
                 raise HTTPException(status_code=400)
             new_file = session.create(FSObject(
-                name=name,
-                full_path=(Path(parent.full_path) / name).as_posix(),
-                ref_id=str(uuid.uuid4()).replace('-', ''),
+                name=data.filename,
+                full_path=full_path.as_posix(),
+                ref_id=ref_id,
                 type=FSObjectType.FILE,
                 parent_id=parent.id,
             ))
             return FileDto.from_entity(new_file)
+
+    async def rename(self, full_path: str, new_name: str):
+        with self.get_session() as session:
+            target = session.get_by_path(full_path)
+            if not target:
+                raise HTTPException(status_code=404)
+
+            siblings = set(child.name for child in target.parent.children)
+            if new_name in siblings:
+                raise HTTPException(status_code=400)
+
+            old_name_start = full_path.rfind('/') + 1
+            new_path = full_path[:old_name_start] + new_name
+            old_name_end = len(full_path)
+            target.name = new_name
+            target.full_path = new_path
+            if target.type == FSObjectType.FILE:
+                return FileDto.from_entity(target)
+
+            new_basepath = new_path
+            for child in session.read_all_descendants(full_path):
+                origin_path = child.full_path
+                renamed_path = new_basepath + origin_path[old_name_end:]
+                child.full_path = renamed_path
+
+            return DirDto.from_entity(target)
 
     async def delete(self, full_path: str, rmtree: bool):
         with self.get_session() as session:
@@ -115,15 +140,17 @@ class FSService:
             if not target:
                 raise HTTPException(status_code=404)
 
-            path = self.root_dir / full_path[1:]
-
             if target.type == FSObjectType.FILE:
-                path.unlink(missing_ok=True)
+                (self.root_dir / target.ref_id).unlink(missing_ok=True)
                 session.delete(target)
                 return
 
-            if not (target.children or rmtree):
-                raise HTTPException(status_code=400)
+            elif target.type == FSObjectType.DIR:
+                if not rmtree:
+                    raise HTTPException(status_code=403)
+                for file in session.read_all_descendant_files(full_path):
+                    (self.root_dir / file.ref_id).unlink(missing_ok=True)
+                session.delete(target)
+                return
 
-            shutil.rmtree(path)
-            session.delete(target)
+            raise HTTPException(status_code=500)
