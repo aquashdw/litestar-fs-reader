@@ -42,7 +42,8 @@ def compare_fs_db(root_dir: Path):
     with repo_factory(FSRepository) as session:
         missing = set(entity for entity in session.read_all_descendant_files() if entity.ref_id not in fs_pool)
         # TODO create a report
-        print(missing)
+        for file in missing:
+            print(f'Logical file: {file.full_path} (physical: {file.ref_id}) is missing')
 
 
 def init():
