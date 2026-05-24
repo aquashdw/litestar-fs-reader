@@ -67,7 +67,7 @@ class FSService:
                 full_path=full_path,
                 ref_id=str(uuid.uuid4()).replace('-', ''),
                 type=FSObjectType.DIR,
-                parent_id=parent.id,
+                parent=parent,
             ))
             return DirDto.from_entity(new_dir)
 
@@ -104,7 +104,7 @@ class FSService:
                 full_path=full_path.as_posix(),
                 ref_id=ref_id,
                 type=FSObjectType.FILE,
-                parent_id=parent.id,
+                parent=parent,
             ))
             return FileDto.from_entity(new_file)
 
