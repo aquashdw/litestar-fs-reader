@@ -1,6 +1,7 @@
-from typing import List, Iterable, Optional
+from typing import List, Iterable, Optional, Annotated
 
 from litestar import get, post, Request, delete, patch
+from litestar.params import QueryParameter
 from litestar.response import Stream
 
 from singletons import service
@@ -15,6 +16,11 @@ async def index() -> Iterable[FSObjectDto]:
 @get('/{full_path:path}')
 async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
     return await service.get_obj(full_path)
+
+
+@get('/ref', status_code=204)
+async def get_obj_by_ref(ref_id: Annotated[str, QueryParameter(name='query')]) -> None:
+    print(ref_id)
 
 
 @post(['/', '/{full_path:path}'], status_code=201)
@@ -52,6 +58,7 @@ async def delete_target(
 handlers = [
     index,
     get_obj,
+    get_obj_by_ref,
     create_obj,
     rename,
     delete_target
