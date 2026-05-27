@@ -80,6 +80,9 @@ class FSRepository(RepositorySession):
         entity = self.session.scalar(select(FSObject).where(FSObject.full_path == full_path))
         return entity
 
+    def get_by_ref(self, ref_id: str) -> Optional[FSObject]:
+        return self.session.scalar(select(FSObject).where(FSObject.ref_id == ref_id))
+
     def exists_by_path(self, full_path: str) -> bool:
         return self.session.scalar(exists().where(FSObject.full_path == full_path).select())
 
