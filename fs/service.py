@@ -47,6 +47,27 @@ class FSService:
 
             raise HTTPException(status_code=500)
 
+    async def get_obj_by_ref(self, ref_id: str) -> Iterable[FSObjectDto] | Stream:
+        with self.get_session() as session:
+            target = session.get_by_ref(ref_id)
+            if not target:
+                raise HTTPException(status_code=404)
+
+            if target.type == FSObjectType.FILE:
+                ref_id = target.ref_id
+                return Stream(
+                    file_streamer(self.root_dir / ref_id),
+                    media_type=get_mime_type(target.name),
+                )
+            elif target.type == FSObjectType.DIR:
+                listdir = list(map(FSObjectDto.from_entity, target.children))
+                parent_dto = FSObjectDto.from_entity(target.parent)
+                parent_dto.name = '..'
+                listdir.append(parent_dto)
+                return listdir
+
+            raise HTTPException(status_code=500)
+
     def create_dir(self, full_path: str) -> DirDto:
         with self.get_session() as session:
             if session.exists_by_path(full_path):
