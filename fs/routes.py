@@ -19,8 +19,8 @@ async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
 
 
 @get('/ref', status_code=204)
-async def get_obj_by_ref(ref_id: Annotated[str, QueryParameter(name='query')]) -> None:
-    print(ref_id)
+async def get_obj_by_ref(ref_id: Annotated[str, QueryParameter(name='query')]) -> List[FSObjectDto] | Stream:
+    return await service.get_obj_by_ref(ref_id)
 
 
 @post(['/', '/{full_path:path}'], status_code=201)
