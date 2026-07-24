@@ -1,10 +1,12 @@
-from typing import List, Iterable, Optional, Annotated
+from pathlib import Path
+from typing import List, Iterable, Optional, Annotated, AsyncGenerator
 
-from litestar import get, post, Request, delete, patch
+from litestar import get, post, Request, delete, patch, Response
 from litestar.params import QueryParameter
 from litestar.response import Stream
 
 from singletons import service
+from utils import get_mime_type
 from .models import FSObjectDto
 
 
@@ -14,8 +16,18 @@ async def index() -> Iterable[FSObjectDto]:
 
 
 @get('/{full_path:path}')
-async def get_obj(full_path: str) -> List[FSObjectDto] | Stream:
-    return await service.get_obj(full_path)
+async def get_obj(full_path: str) -> Response | Stream:
+    found = await service.get_obj(full_path)
+    if isinstance(found, AsyncGenerator):
+        return Stream(
+            found,
+            media_type=get_mime_type(Path(full_path).name),
+        )
+    else:
+        return Response(
+            found,
+            media_type='application/json',
+        )
 
 
 @get('/ref', status_code=200)

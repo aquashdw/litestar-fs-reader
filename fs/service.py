@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, AsyncGenerator
 
 from litestar.exceptions import HTTPException
 from litestar.response import Stream
@@ -26,7 +26,7 @@ class FSService:
     def list_root(self) -> Iterable[FSObjectDto]:
         return self.list_dir('/')
 
-    async def get_obj(self, full_path: str) -> Iterable[FSObjectDto] | Stream:
+    async def get_obj(self, full_path: str) -> Iterable[FSObjectDto] | AsyncGenerator[bytes, None]:
         with self.get_session() as session:
             target = session.get_by_path(full_path)
             if not target:
@@ -34,10 +34,8 @@ class FSService:
 
             if target.type == FSObjectType.FILE:
                 ref_id = target.ref_id
-                return Stream(
-                    file_streamer(self.root_dir / ref_id),
-                    media_type=get_mime_type(target.name),
-                )
+                return file_streamer(self.root_dir / ref_id)
+
             elif target.type == FSObjectType.DIR:
                 listdir = list(map(FSObjectDto.from_entity, target.children))
                 parent_dto = FSObjectDto.from_entity(target.parent)
